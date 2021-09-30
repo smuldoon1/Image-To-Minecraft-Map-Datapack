@@ -1,6 +1,7 @@
 from PIL import Image
 import math
 import os
+import shutil
 
 colour_data = [
     {"r":127,"g":178,"b":56,"block":"slime_block"},
@@ -135,10 +136,14 @@ def GetBlockColour(pixel, colours):
     return matchedColour
 
 colours = SetupColours(colour_data)
-image_directory = "images"
+image_dir = "images"
+mcfunction_dir = "functions"
 image_files = []
 
-for file in os.listdir(os.fsencode(image_directory)):
+if os.path.isdir(mcfunction_dir):
+    shutil.rmtree(mcfunction_dir)
+os.mkdir(mcfunction_dir)
+for file in os.listdir(os.fsencode(image_dir)):
     filename = os.fsdecode(file)
     if (filename.endswith(".jpg") or filename.endswith(".png")):
         image_files.append(filename)
@@ -146,7 +151,7 @@ for file in os.listdir(os.fsencode(image_directory)):
 print("Converting " + str(len(image_files)) + " image file(s)")
 
 for image_index in range(0, len(image_files)):
-    image = Image.open(image_directory + "/" + image_files[image_index])
+    image = Image.open(image_dir + "/" + image_files[image_index])
     resized_image = image.resize((128, 128))
     pixels = resized_image.load()
 
@@ -163,7 +168,7 @@ for image_index in range(0, len(image_files)):
         print("Progress: " + "{:.2f}".format(100/(len(image_files)*128)*(image_index*128+y)) + "%")
     print("Finished converting " + str(image_index + 1) + " of " + str(len(image_files)) + " images")
 
-    f = open(image_files[image_index] + ".mcfunction", "w")
+    f = open(mcfunction_dir + "/" + image_files[image_index] + ".mcfunction", "w")
     f.write(commands)
     f.close()
 
