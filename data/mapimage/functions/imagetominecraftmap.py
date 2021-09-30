@@ -1,4 +1,5 @@
 from PIL import Image
+import math
 
 colour_data = [
     {"r":127,"g":178,"b":56,"block":"slime_block"},
@@ -62,61 +63,78 @@ colour_data = [
     {"r":216,"g":175,"b":147,"block":"raw_iron_block"}
 ]
 
-def RGBToHSV(red, green, blue):
-    r = red / 255
-    g = green / 255
-    b = blue / 255
-    v = max(r, g, b)
-    cmin = min(r, g, b)
-    delta = v - cmin
-    h = 0
-    s = 0
-    if r == g and g == b:
-        h = 0
-    elif v == r:
-        h = 60 * ((g - b) / delta % 6)
-    elif v == g:
-        h = 60 * ((b - r) / delta + 2)
-    else:
-        h = 60 * ((r - g) / delta + 4)
-    if v == 0:
-        s = 0
-    else:
-        s = delta / v
-    return [h,s,v]
-
-def GetHSVColour(colour, multiplier, shade):
-    hsv = RGBToHSV(colour["r"] * multiplier, colour["g"] * multiplier, colour["b"] * multiplier)
-    return {"h":hsv[0], "s":hsv[1], "v":hsv[2], "block":colour["block"], "shade":shade}
-
 def SetupColours(colour_data):
-    i = 0
-    hsv_colours = []
-    for colour in colour_data:
-        hsv_colours.append(GetHSVColour(colour, 1, -1))
-        hsv_colours.append(GetHSVColour(colour, 0.86, 0))
-        hsv_colours.append(GetHSVColour(colour, 0.71, 1))
-        i = i + 1
-    return hsv_colours
+    colours = []
+    for mapcolour in colour_data:
+        colours.append({"Lab":RGBToLab([mapcolour["r"], mapcolour["g"], mapcolour["b"]]), "block":mapcolour["block"], "slope":-1})
+        colours.append({"Lab":RGBToLab([mapcolour["r"] * 0.86, mapcolour["g"] * 0.86, mapcolour["b"] * 0.86]), "block":mapcolour["block"], "slope":0})
+        colours.append({"Lab":RGBToLab([mapcolour["r"] * 0.71, mapcolour["g"] * 0.71, mapcolour["b"] * 0.71]), "block":mapcolour["block"], "slope":1})
+    return colours
 
-def GetBlockColour(pixel, colour_array):
-    closestIndex = -1
-    closestHSV = 10000
-    i = 0
-    for colour in colour_array:
-        hueDistance = min(abs(pixel[0] - colour["h"]) - abs(pixel[1] - colour["s"] * 7) - abs(pixel[2] - colour["v"] * 2), abs(pixel[0] - colour["h"] + 360) - abs(pixel[1] - colour["s"] * 7) - abs(pixel[2] - colour["v"] * 2))
-        if hueDistance < closestHSV:
-            closestHSV = hueDistance
-            closestIndex = i
-        i = i + 1
-    return closestIndex
+# RGB to XYZ to CIE-L*ab colour space conversion from http://www.easyrgb.com/en/math.php
+def RGBToLab(rgb):
+    r = rgb[0] / 255
+    g = rgb[1] / 255
+    b = rgb[2] / 255
 
-def ReadPixel(x, y):
-    return RGBToHSV(pixels[x,y][0], pixels[x,y][1], pixels[x,y][2])
-    
-colours = SetupColours(colour_data)
+    if r > 0.04045:
+        r = (r + 0.055) / 1.055 ** 2.4
+    else:
+        r = r / 12.92
+    if g > 0.04045:
+        g = (g + 0.055) / 1.055 ** 2.4
+    else:
+        g = g / 12.92
+    if b > 0.04045:
+        b = (b + 0.055) / 1.055 ** 2.4
+    else:
+        b = b / 12.92
+
+    r = r * 100
+    g = g * 100
+    b = b * 100
+
+    x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 94.811
+    y = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 100.000
+    z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 107.304
+
+    if x > 0.008856:
+        x = x ** (1/3)
+    else:
+        x = (7.787 * x) + (16 / 116)
+    if y > 0.008856:
+        y = y ** (1/3)
+    else:
+        y = (7.787 * y) + (16 / 116)
+    if z > 0.008856:
+        z = z ** (1/3)
+    else:
+        z = (7.787 * z) + (16 / 116)
+
+    L = (116 * y) - 16
+    a = 500 * (x - y)
+    b = 200 * (y - z)
+
+    return [L,a,b]
+
+# Delta E* CIE colour comparison from http://www.easyrgb.com/en/math.php
+def CompareColours(lab1, lab2):
+    return math.sqrt(((lab1[0] - lab2[0]) ** 2) + ((lab1[1] - lab2[1]) ** 2) + ((lab1[2] - lab2[2]) ** 2))
+
+def GetBlockColour(pixel, colours):
+    matchedColour = {}
+    minDelta = 10000
+    i = 0
+    for colour in colours:
+        pixelLab = RGBToLab(pixel)
+        deltaE = CompareColours(pixelLab, colour["Lab"])
+        if deltaE < minDelta:
+            minDelta = deltaE
+            matchedColour = colour
+    return matchedColour
+
 height_levels = [128] * 128
-
+colours = SetupColours(colour_data)
 pixels = Image.open('test_image.png').load()
 
 commands = ""
@@ -125,9 +143,9 @@ for i in range(-64, 64):
     
 for y in range(0, 128):
     for x in range(0, 128):
-        number = GetBlockColour(ReadPixel(x, y), colours)
-        commands = commands + "setblock " + str(x-64) + " " + str(height_levels[x]) + " " + str(y-64) + " " + str(colours[int(number)]["block"]) + "\n"
-        height_levels[x] = height_levels[x] + colours[int(number)]["shade"]
+        colour = GetBlockColour(pixels[x, y], colours)
+        commands = commands + "setblock " + str(x-64) + " " + str(height_levels[x]) + " " + str(y-64) + " " + colour["block"] + "\n"
+        height_levels[x] = height_levels[x] + colour["slope"]
 
 f = open("imagetomap.mcfunction", "w")
 f.write(commands)
