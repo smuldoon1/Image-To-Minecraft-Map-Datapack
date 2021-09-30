@@ -135,7 +135,7 @@ def GetBlockColour(pixel, colours):
 
 height_levels = [128] * 128
 colours = SetupColours(colour_data)
-pixels = Image.open('test_image.jpg').load()
+pixels = Image.open('test_image.png').load()
 
 commands = ""
 for i in range(-64, 64):
