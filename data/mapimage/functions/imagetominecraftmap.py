@@ -66,9 +66,9 @@ colour_data = [
 def SetupColours(colour_data):
     colours = []
     for mapcolour in colour_data:
-        colours.append({"Lab":RGBToLab([mapcolour["r"], mapcolour["g"], mapcolour["b"]]), "block":mapcolour["block"], "slope":-1})
+        colours.append({"Lab":RGBToLab([mapcolour["r"], mapcolour["g"], mapcolour["b"]]), "block":mapcolour["block"], "slope":1})
         colours.append({"Lab":RGBToLab([mapcolour["r"] * 0.86, mapcolour["g"] * 0.86, mapcolour["b"] * 0.86]), "block":mapcolour["block"], "slope":0})
-        colours.append({"Lab":RGBToLab([mapcolour["r"] * 0.71, mapcolour["g"] * 0.71, mapcolour["b"] * 0.71]), "block":mapcolour["block"], "slope":1})
+        colours.append({"Lab":RGBToLab([mapcolour["r"] * 0.71, mapcolour["g"] * 0.71, mapcolour["b"] * 0.71]), "block":mapcolour["block"], "slope":-1})
     return colours
 
 # RGB to XYZ to CIE-L*ab colour space conversion from http://www.easyrgb.com/en/math.php
@@ -135,7 +135,7 @@ def GetBlockColour(pixel, colours):
 
 height_levels = [128] * 128
 colours = SetupColours(colour_data)
-pixels = Image.open('test_image.png').load()
+pixels = Image.open('test_image.jpg').load()
 
 commands = ""
 for i in range(-64, 64):
