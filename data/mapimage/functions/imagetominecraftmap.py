@@ -1,5 +1,6 @@
 from PIL import Image
 import math
+import os
 
 colour_data = [
     {"r":127,"g":178,"b":56,"block":"slime_block"},
@@ -133,20 +134,37 @@ def GetBlockColour(pixel, colours):
             matchedColour = colour
     return matchedColour
 
-height_levels = [128] * 128
 colours = SetupColours(colour_data)
-pixels = Image.open('test_image.png').load()
+image_directory = "images"
+image_files = []
 
-commands = ""
-for i in range(-64, 64):
-    commands = commands + "fill -64 1 " + str(i) + " 63 255 " + str(i) + " air\n"
+for file in os.listdir(os.fsencode(image_directory)):
+    filename = os.fsdecode(file)
+    if (filename.endswith(".jpg") or filename.endswith(".png")):
+        image_files.append(filename)
+
+print("Converting " + str(len(image_files)) + " image file(s)")
+
+for image_index in range(0, len(image_files)):
+    image = Image.open(image_directory + "/" + image_files[image_index])
+    resized_image = image.resize((128, 128))
+    pixels = resized_image.load()
+
+    height_levels = [128] * 128
+    commands = ""
+    for i in range(-64, 64):
+        commands = commands + "fill -64 1 " + str(i) + " 63 255 " + str(i) + " air\n"
     
-for y in range(0, 128):
-    for x in range(0, 128):
-        colour = GetBlockColour(pixels[x, y], colours)
-        commands = commands + "setblock " + str(x-64) + " " + str(height_levels[x]) + " " + str(y-64) + " " + colour["block"] + "\n"
-        height_levels[x] = height_levels[x] + colour["slope"]
+    for y in range(0, 128):
+        for x in range(0, 128):
+            colour = GetBlockColour(pixels[x, y], colours)
+            commands = commands + "setblock " + str(x-64) + " " + str(height_levels[x]) + " " + str(y-64) + " " + colour["block"] + "\n"
+            height_levels[x] = height_levels[x] + colour["slope"]
+        print("Progress: " + "{:.2f}".format(100/(len(image_files)*128)*(image_index*128+y)) + "%")
+    print("Finished converting " + str(image_index + 1) + " of " + str(len(image_files)) + " images")
 
-f = open("imagetomap.mcfunction", "w")
-f.write(commands)
-f.close()
+    f = open(image_files[image_index] + ".mcfunction", "w")
+    f.write(commands)
+    f.close()
+
+print("Image conversion succeeded")
