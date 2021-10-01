@@ -120,8 +120,32 @@ def RGBToLab(rgb):
     return [L,a,b]
 
 # Delta E* CIE colour comparison from http://www.easyrgb.com/en/math.php
-def CompareColours(lab1, lab2):
+def CompareColoursSimple(lab1, lab2):
     return math.sqrt(((lab1[0] - lab2[0]) ** 2) + ((lab1[1] - lab2[1]) ** 2) + ((lab1[2] - lab2[2]) ** 2))
+
+# Delta E 1994 colour comparison from http://www.easyrgb.com/en/math.php
+def CompareColours(lab1, lab2):
+    xC1 = math.sqrt((lab1[1] ** 2) + (lab1[2] ** 2))
+    xC2 = math.sqrt((lab2[1] ** 2) + (lab2[2] ** 2))
+
+    xDL = lab2[0] - lab1[0]
+    xDC = xC2 - xC1
+    xDE = math.sqrt(((lab1[0] - lab2[0]) * (lab1[0] - lab2[0])) + ((lab1[1] - lab2[1]) * (lab1[1] - lab2[1])) + ((lab1[2] - lab2[2]) * (lab1[2] - lab2[2])))
+
+    xDH = (xDE * xDE) - (xDL * xDL) - (xDC * xDC)
+    if xDH > 0:
+       xDH = math.sqrt(xDH)
+    else:
+       xDH = 0
+
+    xSC = 0.045 * xC1 + 1
+    xSH = 0.015 * xC1 + 1
+
+    xDL /= 1
+    xDC /= 1 * xSC
+    xDH /= 1 * xSH
+
+    return math.sqrt(xDL ** 2 + xDC ** 2 + xDH ** 2)
 
 def GetBlockColour(pixel, colours):
     matchedColour = {}
