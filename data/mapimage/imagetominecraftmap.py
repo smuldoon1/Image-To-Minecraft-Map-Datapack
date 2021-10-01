@@ -181,14 +181,15 @@ for image_index in range(0, len(image_files)):
 
     height_levels = [128] * 128
     commands = ""
-    for i in range(-64, 64):
+    for i in range(-65, 64):
         commands = commands + "fill -64 1 " + str(i) + " 63 255 " + str(i) + " air\n"
+    commands = commands + "fill -64 128 -65 63 128 -65 stone\n"
     
     for y in range(0, 128):
         for x in range(0, 128):
             colour = GetBlockColour(pixels[x, y], colours)
-            commands = commands + "setblock " + str(x-64) + " " + str(height_levels[x]) + " " + str(y-64) + " " + colour["block"] + "\n"
             height_levels[x] = height_levels[x] + colour["slope"]
+            commands = commands + "setblock " + str(x-64) + " " + str(height_levels[x]) + " " + str(y-64) + " " + colour["block"] + "\n"
         print("Progress: " + "{:.2f}".format(100/(len(image_files)*128)*(image_index*128+y)) + "%")
     print("Finished converting " + str(image_index + 1) + " of " + str(len(image_files)) + " images")
 
